@@ -1,0 +1,36 @@
+===== Logistic Regression Model =====
+Accuracy: 95.03%
+Confusion Matrix:
+[[ 753  105   41]
+ [   3 3431    5]
+ [  32  112 1518]]
+Classification Report:
+              precision    recall  f1-score   support
+
+         pos       0.96      0.84      0.89       899
+         neu       0.94      1.00      0.97      3439
+         neg       0.97      0.91      0.94      1662
+
+    accuracy                           0.95      6000
+   macro avg       0.96      0.92      0.93      6000
+weighted avg       0.95      0.95      0.95      6000
+
+
+===== Naive Bayes Model =====
+Accuracy: 85.53%
+Confusion Matrix:
+[[ 618  171  110]
+ [ 141 3112  186]
+ [  49  211 1402]]
+Classification Report:
+              precision    recall  f1-score   support
+
+         pos       0.76      0.69      0.72       899
+         neu       0.89      0.90      0.90      3439
+         neg       0.83      0.84      0.83      1662
+
+    accuracy                           0.86      6000
+   macro avg       0.83      0.81      0.82      6000
+weighted avg       0.85      0.86      0.85      6000
+
+
