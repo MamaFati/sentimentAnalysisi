@@ -12,3 +12,4 @@ symspellpy
 joblib
 wordcloud
 streamlit
+plotly

@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import re
 import warnings
-
 from sklearn.naive_bayes import MultinomialNB
 from preprocessing import clean_text
 import joblib
@@ -13,19 +12,15 @@ from wordcloud import WordCloud
 from collections import Counter
 from spacy.lang.en.stop_words import STOP_WORDS as stopwords
 from textblob import TextBlob, Word, Blobber
-# Convert a collection of text documents to a matrix of token counts.
 from sklearn.feature_extraction.text import CountVectorizer
-#To split data into train and test
 from sklearn.model_selection import train_test_split
-#For fitting model
 from sklearn.linear_model import LogisticRegression
-#For evaluation of model
-from sklearn.metrics import accuracy_score, auc, classification_report, confusion_matrix, ConfusionMatrixDisplay, roc_curve
+from sklearn.metrics import accuracy_score, auc, classification_report, confusion_matrix, ConfusionMatrixDisplay, precision_recall_fscore_support, roc_curve
 from nltk.tokenize import word_tokenize
-# For Stemming text
 from nltk.stem import PorterStemmer 
 import seaborn as sns
 import os
+from sklearn.preprocessing import label_binarize
 from bs4 import BeautifulSoup
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import nltk
@@ -78,7 +73,9 @@ def sentiment(label):
 
 ###---- DATA COLLECTION ---###
 # load dataset
-df = pd.read_csv("../ data/rawData/vaccination_all_tweets.csv")   
+df = pd.read_csv("../ data/rawData/vaccination_all_tweets.csv")
+df.info()
+df.shape   
  
  #### LOAD AND PREPROCESSING DATA ####
 reduceData = df[:30000]
@@ -106,13 +103,13 @@ content_df["emails_count"] = content_df["emails"].apply(len)
 # Combine all text into one big string
 text = " ".join(content_df["text"].dropna().tolist())
 # Generate the word cloud
-# wordcloud = WordCloud(width=800, height=400, background_color="white").generate(text)
-# plt.figure(figsize=(15, 7))
-# plt.imshow(wordcloud, interpolation="bilinear")
-# plt.axis("off")
-# plt.title("Most Common Words in Tweets", fontsize=20)
-# plt.savefig("../images/generalWordCloud.png")
-# plt.close()
+wordcloud = WordCloud(width=800, height=400, background_color="white").generate(text)
+plt.figure(figsize=(15, 7))
+plt.imshow(wordcloud, interpolation="bilinear")
+plt.axis("off")
+plt.title("Most Common Words in Tweets", fontsize=20)
+plt.savefig("../output/images/visualization/generalWordCloud.png")
+plt.close()
 content_df.to_csv("cleaned_tweets.csv", index=False)
 # print(content_df["text"])
 
@@ -374,6 +371,80 @@ with open("../output/sentiment_model_final_comparison_report.txt", "w") as f:
     f.write("\n\n")
 
 # === Comparative Visualizations ===
+ 
+ # Define class labels
+labels = ["pos", "neu", "neg"]
+
+# Get precision, recall, and f1-score for both models
+precision_log, recall_log, f1_log, _ = precision_recall_fscore_support(
+    y_test, logreg_pred, labels=labels, zero_division=0
+)
+precision_nb, recall_nb, f1_nb, _ = precision_recall_fscore_support(
+    y_test, nb_pred, labels=labels, zero_division=0
+)
+
+# Create DataFrame for visualization
+metrics_df = pd.DataFrame({
+    "Class": labels * 2,
+    "Precision": list(precision_log) + list(precision_nb),
+    "Recall": list(recall_log) + list(recall_nb),
+    "F1-Score": list(f1_log) + list(f1_nb),
+    "Model": ["Logistic Regression"] * len(labels) + ["Naive Bayes"] * len(labels)
+})
+
+# -------- Precision Plot --------
+plt.figure(figsize=(8, 5))
+sns.barplot(x="Class", y="Precision", hue="Model", data=metrics_df, palette="Set2")
+plt.title("Precision Comparison per Class")
+plt.ylim(0, 1)
+plt.ylabel("Precision")
+plt.savefig("../output/images/resultAnalysisVisualization/precision_comparison.png")
+plt.show()
+
+# -------- Recall Plot --------
+plt.figure(figsize=(8, 5))
+sns.barplot(x="Class", y="Recall", hue="Model", data=metrics_df, palette="Set1")
+plt.title("Recall Comparison per Class")
+plt.ylim(0, 1)
+plt.ylabel("Recall")
+plt.savefig("../output/images/resultAnalysisVisualization/recall_comparison.png")
+plt.show()
+
+# -------- F1-Score Plot --------
+plt.figure(figsize=(8, 5))
+sns.barplot(x="Class", y="F1-Score", hue="Model", data=metrics_df, palette="Set3")
+plt.title("F1-Score Comparison per Class")
+plt.ylim(0, 1)
+plt.ylabel("F1-Score")
+plt.savefig("../output/images/resultAnalysisVisualization/f1score_comparison.png")
+plt.show()
+
+# --- Combined Metrics Visualization ---
+
+# Reshape metrics for grouped bar chart
+combined_df = pd.DataFrame({
+    "Class": labels * 6,
+    "Metric": (["Precision"] * len(labels) + ["Recall"] * len(labels) + ["F1-Score"] * len(labels)) * 2,
+    "Score": list(precision_log) + list(recall_log) + list(f1_log) +
+             list(precision_nb) + list(recall_nb) + list(f1_nb),
+    "Model": ["Logistic Regression"] * (3*len(labels)) + ["Naive Bayes"] * (3*len(labels))
+})
+
+plt.figure(figsize=(12, 6))
+sns.barplot(x="Class", y="Score", hue="Metric", data=combined_df, palette="Set2", ci=None)
+
+# Add grid and labels
+plt.title("Comparison of Precision, Recall, and F1-Score per Class")
+plt.ylim(0, 1)
+plt.ylabel("Score")
+plt.legend(title="Metric")
+plt.grid(axis="y", linestyle="--", alpha=0.7)
+
+# Save figure
+plt.tight_layout()
+plt.savefig("../output/images/resultAnalysisVisualization/combined_metrics_comparison.png")
+plt.show()
+
 
 # Accuracy Comparison Bar Chart
 model_names = ["Logistic Regression", "Naive Bayes"]
@@ -409,8 +480,6 @@ plt.xlabel("Predicted")
 plt.ylabel("True")
 plt.savefig("../output/images/resultAnalysisVisualization/confusion_matrix_nb.png")
 plt.close()
-
-from sklearn.preprocessing import label_binarize
 
 # Convert labels to binary format for multi-class ROC (One-vs-Rest)
 y_test_bin = label_binarize(y_test, classes=["pos", "neu", "neg"])
@@ -502,5 +571,5 @@ print("Results saved to sentiment_model_final_comparison_report.txt")
 print("Visualizations saved to output/images/")
 print("Models saved to output/streamlit_models/")
 
-# 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
+ 
 
